@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meu Orçamento</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2a24;
+      --muted: #6c7b72;
+      --green: #267354;
+      --green-light: #e6f2eb;
+      --paper: #f5f7f5;
+      --line: #e3e9e5;
+      --white: #fff;
+      --red: #b44b43;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16px/1.5 "Segoe UI", Arial, sans-serif;
+    }
+    main { width: min(1060px, calc(100% - 32px)); margin: 36px auto; }
+    header { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; }
+    h1, h2, p { margin-top: 0; }
+    h1 { margin-bottom: 4px; font-size: clamp(1.7rem, 4vw, 2.25rem); letter-spacing: -.04em; }
+    h2 { margin-bottom: 16px; font-size: 1.15rem; }
+    .subtitle, .muted { color: var(--muted); }
+    .month-control { display: grid; gap: 5px; min-width: 170px; }
+    label { font-size: .9rem; font-weight: 600; }
+    input, select, button { font: inherit; }
+    input, select {
+      width: 100%; min-height: 42px; padding: 9px 11px;
+      border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--ink);
+    }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+    .card, .panel { border: 1px solid var(--line); border-radius: 14px; background: var(--white); }
+    .card { padding: 18px 20px; }
+    .card span { display: block; color: var(--muted); font-size: .9rem; font-weight: 600; }
+    .card strong { display: block; margin-top: 6px; font-size: clamp(1.25rem, 3vw, 1.8rem); letter-spacing: -.03em; }
+    .content { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(320px, 1.15fr); gap: 18px; }
+    .panel { padding: 20px; }
+    form { display: grid; gap: 12px; }
+    .field { display: grid; gap: 5px; }
+    button {
+      min-height: 44px; padding: 10px 14px; border: 0; border-radius: 9px;
+      background: var(--green); color: white; font-weight: 700; cursor: pointer;
+    }
+    button:hover { background: #1c6045; }
+    .notice { min-height: 22px; margin: 10px 0 0; color: var(--green); font-size: .92rem; }
+    .notice.error { color: var(--red); }
+    .empty { color: var(--muted); padding: 10px 0; }
+    .category-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .category-row:last-child { border-bottom: 0; }
+    .category-name { font-weight: 600; }
+    .category-total { font-variant-numeric: tabular-nums; }
+    .bar { grid-column: 1 / -1; height: 6px; overflow: hidden; border-radius: 99px; background: var(--green-light); }
+    .bar span { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+    .history { margin-top: 18px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 11px 9px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th { color: var(--muted); font-size: .82rem; font-weight: 600; }
+    td:last-child, th:last-child { text-align: right; }
+    .income { color: var(--green); }
+    .expense { color: var(--red); }
+    footer { margin-top: 18px; color: var(--muted); font-size: .82rem; }
+    @media (max-width: 720px) {
+      main { margin: 22px auto; }
+      header { align-items: stretch; flex-direction: column; }
+      .month-control { max-width: 220px; }
+      .cards { grid-template-columns: 1fr; gap: 9px; }
+      .card { padding: 14px 16px; }
+      .content { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Meu Orçamento</h1>
+        <p class="subtitle">Acompanhe suas receitas e despesas do mês.</p>
+      </div>
+      <div class="month-control">
+        <label for="mes">Mês de referência</label>
+        <input id="mes" type="month">
+      </div>
+    </header>
+
+    <section class="cards" aria-label="Resumo do mês">
+      <article class="card"><span>Receitas</span><strong id="receitas">R$ 0,00</strong></article>
+      <article class="card"><span>Despesas</span><strong id="despesas">R$ 0,00</strong></article>
+      <article class="card"><span>Saldo do mês</span><strong id="saldo">R$ 0,00</strong></article>
+    </section>
+
+    <section class="content">
+      <article class="panel">
+        <h2>Novo lançamento</h2>
+        <form id="form-lancamento">
+          <div class="field">
+            <label for="tipo">Tipo</label>
+            <select id="tipo" name="tipo">
+              <option value="Despesa">Despesa</option>
+              <option value="Receita">Receita</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="descricao">Descrição</label>
+            <input id="descricao" name="descricao" maxlength="100" placeholder="Ex.: mercado" required>
+          </div>
+          <div class="field">
+            <label for="valor">Valor (R$)</label>
+            <input id="valor" name="valor" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+          </div>
+          <div class="field">
+            <label for="categoria">Categoria</label>
+            <select id="categoria" name="categoria"></select>
+          </div>
+          <div class="field">
+            <label for="data">Data</label>
+            <input id="data" name="data" type="date" required>
+          </div>
+          <button type="submit">Salvar lançamento</button>
+        </form>
+        <p id="aviso" class="notice" role="status"></p>
+      </article>
+
+      <article class="panel">
+        <h2>Despesas por categoria</h2>
+        <div id="categorias" class="empty">Carregando...</div>
+      </article>
+    </section>
+
+    <section class="panel history">
+      <h2>Lançamentos do mês</h2>
+      <div id="historico" class="empty">Carregando...</div>
+    </section>
+    <footer>Os registros são salvos localmente no arquivo CSV do protótipo.</footer>
+  </main>
+
+  <script>
+    const mesInput = document.querySelector("#mes");
+    const tipoInput = document.querySelector("#tipo");
+    const categoriaInput = document.querySelector("#categoria");
+    const form = document.querySelector("#form-lancamento");
+    const aviso = document.querySelector("#aviso");
+    const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+    const hoje = new Date();
+    const dataLocal = new Date(hoje.getTime() - hoje.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    mesInput.value = dataLocal.slice(0, 7);
+    document.querySelector("#data").value = dataLocal;
+
+    function atualizarCategorias(opcoes) {
+      const categorias = opcoes[tipoInput.value] || [];
+      categoriaInput.replaceChildren(...categorias.map((nome) => {
+        const opcao = document.createElement("option");
+        opcao.value = nome;
+        opcao.textContent = nome;
+        return opcao;
+      }));
+    }
+
+    async function carregarDados() {
+      const resposta = await fetch(`/api/dados?mes=${encodeURIComponent(mesInput.value)}`);
+      const dados = await resposta.json();
+      if (!resposta.ok) throw new Error(dados.erro || "Não foi possível carregar os dados.");
+
+      document.querySelector("#receitas").textContent = moeda.format(dados.receitas);
+      document.querySelector("#despesas").textContent = moeda.format(dados.despesas);
+      document.querySelector("#saldo").textContent = moeda.format(dados.saldo);
+      atualizarCategorias(dados.opcoes_categoria);
+      mostrarCategorias(dados.categorias, dados.despesas);
+      mostrarLancamentos(dados.lancamentos);
+    }
+
+    function mostrarCategorias(categorias, totalDespesas) {
+      const area = document.querySelector("#categorias");
+      area.replaceChildren();
+      if (!categorias.length) {
+        area.textContent = "Ainda não há despesas neste mês.";
+        area.className = "empty";
+        return;
+      }
+      area.className = "";
+      categorias.forEach((item) => {
+        const linha = document.createElement("div");
+        linha.className = "category-row";
+        const nome = document.createElement("span");
+        nome.className = "category-name";
+        nome.textContent = item.nome;
+        const valor = document.createElement("span");
+        valor.className = "category-total";
+        valor.textContent = moeda.format(item.valor);
+        const barra = document.createElement("div");
+        barra.className = "bar";
+        const preenchimento = document.createElement("span");
+        preenchimento.style.width = `${totalDespesas ? item.valor / totalDespesas * 100 : 0}%`;
+        barra.append(preenchimento);
+        linha.append(nome, valor, barra);
+        area.append(linha);
+      });
+    }
+
+    function mostrarLancamentos(lancamentos) {
+      const area = document.querySelector("#historico");
+      area.replaceChildren();
+      if (!lancamentos.length) {
+        area.textContent = "Ainda não há lançamentos neste mês.";
+        area.className = "empty";
+        return;
+      }
+      area.className = "table-wrap";
+      const tabela = document.createElement("table");
+      tabela.innerHTML = "<thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Categoria</th><th>Valor</th></tr></thead>";
+      const corpo = document.createElement("tbody");
+      lancamentos.forEach((item) => {
+        const linha = document.createElement("tr");
+        const data = new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-BR");
+        const valores = [data, item.tipo, item.descricao, item.categoria, moeda.format(item.valor)];
+        valores.forEach((texto, indice) => {
+          const celula = document.createElement("td");
+          celula.textContent = texto;
+          if (indice === 4) celula.className = item.tipo === "Receita" ? "income" : "expense";
+          linha.append(celula);
+        });
+        corpo.append(linha);
+      });
+      tabela.append(corpo);
+      area.append(tabela);
+    }
+
+    tipoInput.addEventListener("change", () => {
+      fetch(`/api/dados?mes=${encodeURIComponent(mesInput.value)}`)
+        .then((resposta) => resposta.json())
+        .then((dados) => atualizarCategorias(dados.opcoes_categoria));
+    });
+    mesInput.addEventListener("change", () => carregarDados().catch(mostrarErro));
+    form.addEventListener("submit", async (evento) => {
+      evento.preventDefault();
+      aviso.textContent = "";
+      const item = Object.fromEntries(new FormData(form).entries());
+      item.valor = Number(item.valor);
+      try {
+        const resposta = await fetch("/api/lancamentos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        });
+        const resultado = await resposta.json();
+        if (!resposta.ok) throw new Error(resultado.erro || "Não foi possível salvar.");
+        aviso.textContent = "Lançamento salvo.";
+        aviso.className = "notice";
+        form.reset();
+        document.querySelector("#data").value = dataLocal;
+        atualizarCategorias((await (await fetch(`/api/dados?mes=${encodeURIComponent(mesInput.value)}`)).json()).opcoes_categoria);
+        await carregarDados();
+      } catch (erro) {
+        mostrarErro(erro);
+      }
+    });
+
+    function mostrarErro(erro) {
+      aviso.textContent = erro.message;
+      aviso.className = "notice error";
+    }
+
+    carregarDados().catch(mostrarErro);
+  </script>
+</body>
+</html>
